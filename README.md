@@ -5,8 +5,7 @@
 ```
 game-ai/
 ├── backend/
-│   ├── main.py                # FastAPI后端服务
-│   └── .env                  # 后端环境变量
+│   └── main.py                # FastAPI后端服务
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx          # 主要React组件
@@ -15,8 +14,8 @@ game-ai/
 │   │   └── index.css        # 全局样式
 │   ├── index.html           # 入口HTML
 │   ├── vite.config.js       # Vite配置
-│   ├── package.json         # 前端依赖配置
-│   └── .env                 # 前端环境变量
+│   └── package.json         # 前端依赖配置
+├── .env                     # 环境变量配置
 ├── requirements.txt         # Python依赖
 ├── package.json            # 根目录配置（用于一键启动）
 └── README.md              # 项目说明文档
@@ -63,6 +62,14 @@ npm install
 ```bash
 cp .env.example .env
 # 编辑.env文件，填入必要的API端点和密钥
+```
+
+### 环境配置
+
+1. 在项目根目录中配置环境变量：
+```bash
+cp .env.example .env
+# 编辑.env文件，填入所有必要的API密钥和端点
 ```
 
 ## 启动项目
