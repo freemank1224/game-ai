@@ -1,0 +1,59 @@
+.App {
+    background-color: #f5f5dc; /* Beige background */
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1, h2, h3 {
+    color: #654321; /* Dark brown */
+    font-family: 'Arial', sans-serif;
+}
+
+.card {
+    background-color: #fff8dc; /* Cornsilk */
+    border: 1px solid #8b7355; /* Light brown */
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+    box-shadow: 0 2px 4px rgba(139, 115, 85, 0.1);
+}
+
+button {
+    background-color: #8b4513; /* Saddle brown */
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #a0522d; /* Sienna */
+}
+
+input, select {
+    border: 1px solid #d2b48c; /* Tan */
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #faf0e6; /* Linen */
+}
+
+.navigation {
+    background-color: #deb887; /* Burlywood */
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.footer {
+    margin-top: 40px;
+    padding: 20px;
+    background-color: #d2b48c; /* Tan */
+    color: #463e3f;
+    text-align: center;
+}
