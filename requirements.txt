@@ -1,6 +1,7 @@
-fastapi
-uvicorn
-requests
-python-dotenv
-python-multipart
-aiofiles
+fastapi==0.68.0
+uvicorn==0.15.0
+requests==2.26.0
+python-dotenv==0.19.0
+python-multipart==0.0.5
+aiofiles==0.7.0
+websockets==10.0

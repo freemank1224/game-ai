@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "install:frontend": "cd frontend && npm install",
-    "install:backend": "pip install -r ./requirements.txt",
+    "install:backend": "pip install -r requirements.txt",
     "install:all": "npm run install:frontend && npm run install:backend",
-    "start:backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
-    "start:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd backend && ENV_FILE=${ENV_FILE:-.env} uvicorn main:app --reload --port 8000",
+    "start:frontend": "cd frontend && ENV_FILE=${ENV_FILE:-.env} npm run dev",
     "start:all": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
-    "stop:all": "kill-port 8000 5173"
+    "stop:all": "kill-port 5173 8000 11434 8188",
+    "init:env": "cp .env.template .env.local"
   },
   "devDependencies": {
     "concurrently": "^7.0.0",

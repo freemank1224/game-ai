@@ -66,10 +66,10 @@ cp .env.example .env
 
 ### 环境配置
 
-1. 在项目根目录中配置环境变量：
+1. 复制环境变量模板并配置：
 ```bash
-cp .env.example .env
-# 编辑.env文件，填入所有必要的API密钥和端点
+cp .env.template .env
+# 编辑.env文件，填入必要的API密钥
 ```
 
 ## 启动项目
