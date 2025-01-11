@@ -57,11 +57,29 @@ h1 {
     margin-top: 10px;
 }
 
+.generate-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
 .model-selection {
     margin: 20px 0;
 }
 
 .model-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d2b48c;
+    border-radius: 5px;
+    background-color: #fff;
+    margin-top: 5px;
+}
+
+.object-selection {
+    margin-bottom: 20px;
+}
+
+.object-select {
     width: 100%;
     padding: 10px;
     border: 1px solid #d2b48c;
@@ -110,4 +128,69 @@ h1 {
     padding: 20px 40px;
     border-radius: 5px;
     z-index: 1000;
+}
+
+.images-container {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.image-guess-container {
+    position: relative;
+    flex: 1;
+    text-align: center;
+}
+
+.guess-prompt {
+    text-align: center;
+    color: #8b4513;
+    margin-bottom: 20px;
+}
+
+.guess-button {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background-color: #8b4513;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.guess-button:hover:not(:disabled) {
+    background-color: #a0522d;
+}
+
+.guess-button.selected {
+    background-color: #4CAF50;
+}
+
+.guess-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.result-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.9em;
+}
+
+.result-badge.correct {
+    background-color: #4CAF50;
+}
+
+.result-badge.incorrect {
+    background-color: #f44336;
+}
+
+.image.selected {
+    border: 3px solid #4CAF50;
 }
