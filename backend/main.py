@@ -17,7 +17,7 @@ app = FastAPI()
 # 允许前端访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[f"http://localhost:{os.getenv('VITE_PORT', '5173')}"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

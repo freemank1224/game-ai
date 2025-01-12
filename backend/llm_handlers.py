@@ -35,7 +35,7 @@ class OllamaHandler(LLMHandler):
     """本地Ollama模型处理器"""
     def __init__(self):
         self.api_endpoint = os.getenv("OLLAMA_API_ENDPOINT")
-        self.model = os.getenv("OLLAMA_MODEL", "llama2")
+        self.model = os.getenv("OLLAMA_MODEL", "phi4")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def generate_description(self, image_data: Optional[str], prompt: str) -> str:
@@ -66,6 +66,7 @@ class OllamaHandler(LLMHandler):
 class OpenAIHandler(LLMHandler):
     """OpenAI API处理器"""
     def __init__(self):
+        openai.api_base = os.getenv("OPENAI_API_ENDPOINT")
         openai.api_key = os.getenv("OPENAI_API_KEY")
         self.model = "gpt-4-vision-preview"
 
@@ -108,6 +109,7 @@ class GeminiHandler(LLMHandler):
     """Google Gemini API处理器"""
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
+        api_endpoint = os.getenv("GEMINI_API_ENDPOINT")
         if not api_key:
             raise ValueError("未找到GEMINI_API_KEY")
         genai.configure(api_key=api_key)

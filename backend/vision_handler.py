@@ -7,8 +7,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 class VisionModelHandler:
     def __init__(self):
-        self.api_endpoint = os.getenv("OLLAMA_API_ENDPOINT", "http://localhost:11434/api/generate")
-        self.model = "llama-3.2-vision"  # 使用llama 3.2 vision模型
+        self.api_endpoint = os.getenv("VISION_MODEL_API_ENDPOINT")
+        self.model = os.getenv("VISION_MODEL", "llama3.2-vision:11b")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def analyze_image(self, image_data: Union[str, bytes], prompt: Optional[str] = None) -> str:

@@ -11,6 +11,9 @@ function App() {
   const [imagePositions, setImagePositions] = useState(['real', 'ai'])
   const [userGuess, setUserGuess] = useState(null)
   const [showResult, setShowResult] = useState(false)
+  const [realImage, setRealImage] = useState(null)  // 新增状态存储真实图片
+  const [aiImage, setAiImage] = useState(null)      // 新增状态存储AI图片
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false) // 添加加载状态
 
   const handleObjectSelect = async (event) => {
     const selected = event.target.value
@@ -19,6 +22,8 @@ function App() {
     const selectedObjData = presetObjects.find(obj => obj.id === selected)
     if (!selectedObjData) return
 
+    // 只在内部保存真实图片，不立即显示
+    setRealImage(selectedObjData.image)
     setIsLoading(true)
     try {
       // 调用后端生成描述词
@@ -71,32 +76,37 @@ function App() {
   }
 
   const handleGenerateImage = async () => {
-    let apiEndpoint, apiKey
+    setIsGeneratingImage(true) // 开始生成时设置状态
+    let apiEndpoint
     if (modelType === 'olama') {
-      apiEndpoint = import.meta.env.VITE_OLAMA_API_ENDPOINT
-      apiKey = import.meta.env.VITE_OLAMA_API_KEY
+      apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
     } else if (modelType === 'openai') {
-      apiEndpoint = import.meta.env.VITE_OPENAI_API_ENDPOINT
-      apiKey = import.meta.env.VITE_OPENAI_API_KEY
+      apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
     } else if (modelType === 'gemini') {
-      apiEndpoint = import.meta.env.VITE_GEMINI_API_ENDPOINT
-      apiKey = import.meta.env.VITE_GEMINI_API_KEY
+      apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
     }
 
     try {
-      const imageRes = await fetch(apiEndpoint, {
+      const formData = new FormData()
+      formData.append('objectName', selectedObject)
+      formData.append('model_type', modelType)
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({ description })
+        body: formData
       })
-      const imageResult = await imageRes.json()
-      setResponse(imageResult)
+      const result = await response.json()
+      setAiImage(result.data.image)  // 保存AI生成的图片
+      
+      // 生成随机位置并开始游戏
+      setImagePositions(shuffle(['real', 'ai']))
+      setShowResult(false)
+      setUserGuess(null)
     } catch (error) {
       console.error('Error:', error)
-      setResponse('请求失败，请重试。')
+      setAiImage(null)
+    } finally {
+      setIsGeneratingImage(false) // 生成完成后重置状态
     }
   }
 
@@ -178,32 +188,50 @@ function App() {
         </div>
         
         <div className="right-panel">
-          <h2 className="guess-prompt">请猜测哪个是AI生成的图片？</h2>
+          <h2 className="guess-prompt">
+            {isGeneratingImage ? "正在生成图像..." : 
+             aiImage ? "请猜测哪个是AI生成的图片？" : "请选择对象并生成AI图像"}
+          </h2>
           <div className="images-container">
-            {imagePositions.map((type, index) => (
-              <div key={type} className="image-guess-container">
-                <img
-                  src={type === 'real' 
-                    ? presetObjects.find(obj => obj.id === selectedObject)?.image 
-                    : response?.image}
-                  alt={type}
-                  className={`image ${showResult && userGuess === type ? 'selected' : ''}`}
-                  onClick={() => !showResult && handleGuess(type)}
-                />
-                <button 
-                  className={`guess-button ${showResult && userGuess === type ? 'selected' : ''}`}
-                  onClick={() => !showResult && handleGuess(type)}
-                  disabled={showResult}
-                >
-                  选择这个
-                </button>
-                {showResult && (
-                  <div className={`result-badge ${type === userGuess ? (type === 'ai' ? 'correct' : 'incorrect') : ''}`}>
-                    {type === 'real' ? '真实图片' : 'AI生成'}
-                  </div>
-                )}
-              </div>
-            ))}
+            {(isGeneratingImage || aiImage) ? (
+              imagePositions.map((type, index) => (
+                <div key={type} className="image-guess-container">
+                  {isGeneratingImage ? (
+                    <div className="loading-placeholder" />
+                  ) : (
+                    <>
+                      <img
+                        src={type === 'real' ? realImage : aiImage}
+                        alt={type}
+                        className={`image ${showResult && userGuess === type ? 'selected' : ''}`}
+                        onClick={() => !showResult && handleGuess(type)}
+                      />
+                      <button 
+                        className={`guess-button ${showResult && userGuess === type ? 'selected' : ''}`}
+                        onClick={() => !showResult && handleGuess(type)}
+                        disabled={showResult}
+                      >
+                        选择这个
+                      </button>
+                      {showResult && (
+                        <div className={`result-badge ${type === userGuess ? (type === 'ai' ? 'correct' : 'incorrect') : ''}`}>
+                          {type === 'real' ? '真实图片' : 'AI生成'}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="image-guess-container">
+                  <div className="initial-placeholder" />
+                </div>
+                <div className="image-guess-container">
+                  <div className="initial-placeholder" />
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
