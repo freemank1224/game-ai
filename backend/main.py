@@ -1,11 +1,12 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from typing import Optional  # 添加这行导入
 import requests
 import os
 from dotenv import load_dotenv
-from .llm_handlers import LLMFactory
-from .vision_handler import VisionModelHandler
+from llm_handlers import LLMFactory
+from vision_handler import VisionModelHandler
 import base64
 
 # 加载环境变量，优先使用自定义环境变量文件
@@ -17,12 +18,24 @@ app = FastAPI()
 # 允许前端访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[f"http://localhost:{os.getenv('VITE_PORT', '5173')}"],
+    allow_origins=["*"],  # 临时允许所有来源，仅用于测试
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
-    max_request_size=10_000_000  # 10MB
+    allow_headers=["*"]
 )
+
+# 单独添加文件大小限制配置
+@app.middleware("http")
+async def add_request_size_limit(request, call_next):
+    if request.method == "POST":
+        content_length = request.headers.get("content-length")
+        if (content_length and int(content_length) > 10_000_000):  # 10MB
+            return JSONResponse(
+                status_code=413,
+                content={"detail": "File too large. Maximum size allowed is 10MB"}
+            )
+    response = await call_next(request)
+    return response
 
 # 添加在中间件配置后
 @app.on_event("startup")
@@ -94,21 +107,29 @@ async def upload_image(image: UploadFile = File(...)):
         return ResponseModel.error(str(e))
 
 @app.post("/generate-prompt")
-async def generate_prompt(objectName: str, model_type: str = Form(...)):
+async def generate_prompt(objectName: str = Form(...), image_url: Optional[str] = Form(None)):
+    """从图片生成提示词"""
     try:
-        llm_handler = LLMFactory.get_handler(model_type)
-        prompt = f"Generate a detailed artistic description for creating an image of {objectName}"
-        description = await llm_handler.generate_description(None, prompt)
+        print(f"Debug - Starting generate_prompt: objectName={objectName}, image_url={image_url}")
         
-        # 调用ComfyUI生成图像
-        comfy_response = requests.post(
-            os.getenv("COMFY_UI_API_ENDPOINT"),
-            json={"prompt": description}
-        )
-        
-        return ResponseModel.success({
-            "prompt": description,
-            "image": comfy_response.json().get("image_url")
-        })
+        if not image_url:
+            print("Debug - No image URL provided")
+            return ResponseModel.error("需要提供图片URL", 400)
+
+        try:
+            description = await vision_handler.analyze_image(
+                image_url,
+                f"Please describe this {objectName} in detail, focusing on its visual characteristics."
+            )
+            print(f"Debug - Generated description: {description}")
+            
+            return ResponseModel.success({
+                "prompt": description,
+            })
+        except Exception as e:
+            print(f"Debug - Vision model error: {str(e)}")
+            return ResponseModel.error(f"Vision模型错误: {str(e)}")
+            
     except Exception as e:
-        return ResponseModel.error(str(e))
+        print(f"Debug - General error in generate_prompt: {str(e)}")
+        return ResponseModel.error(f"生成提示词失败: {str(e)}")

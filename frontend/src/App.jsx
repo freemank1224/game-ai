@@ -22,24 +22,36 @@ function App() {
     const selectedObjData = presetObjects.find(obj => obj.id === selected)
     if (!selectedObjData) return
 
-    // 只在内部保存真实图片，不立即显示
     setRealImage(selectedObjData.image)
     setIsLoading(true)
     try {
-      // 调用后端生成描述词
-      const res = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/generate-prompt`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ objectName: selectedObjData.name })
-      })
-      const result = await res.json()
-      setDescription(result.prompt)
+        // 修改请求URL和格式
+        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
+        console.log('Debug - API URL:', apiUrl)
+        
+        const formData = new FormData()
+        formData.append('objectName', selectedObjData.name)
+        formData.append('image_url', selectedObjData.image)
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            body: formData
+        })
+        
+        console.log('Debug - Response:', response.status)
+        const result = await response.json()
+        console.log('Debug - Result:', result)
+        
+        if (result.code === 200) {
+            setDescription(result.data.prompt)
+        } else {
+            throw new Error(result.message || '请求失败')
+        }
     } catch (error) {
-      console.error('Error:', error)
+        console.error('Debug - Error:', error)
+        setDescription('生成描述失败，请重试')
     } finally {
-      setIsLoading(false)
+        setIsLoading(false)
     }
   }
 
