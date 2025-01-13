@@ -16,6 +16,15 @@ function App() {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false) // 添加加载状态
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false) // 新增：生成提示词状态
 
+  const resetGameState = () => {
+    setDescription('')
+    setAiImage(null)
+    setShowResult(false)
+    setUserGuess(null)
+    setIsGeneratingImage(false)
+    setIsGeneratingPrompt(false)
+  }
+
   const handleObjectSelect = async (event) => {
     const selected = event.target.value
     setSelectedObject(selected)
@@ -23,9 +32,14 @@ function App() {
     const selectedObjData = presetObjects.find(obj => obj.id === selected)
     if (!selectedObjData) return
 
+    // 重置游戏状态
+    resetGameState()
+
+    // 设置新的真实图片
     setRealImage(selectedObjData.image)
-    setDescription('')  // 清空当前描述
-    await generatePrompt(selectedObjData)  // 调用生成提示词函数
+    
+    // 开始生成新的提示词
+    await generatePrompt(selectedObjData)
   }
 
   const generatePrompt = async (objData) => {
@@ -65,6 +79,7 @@ function App() {
     if (selectedObject) {
       const objData = presetObjects.find(obj => obj.id === selectedObject)
       if (objData) {
+        resetGameState()
         generatePrompt(objData)
       }
     }
