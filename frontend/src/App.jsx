@@ -15,6 +15,8 @@ function App() {
   const [aiImage, setAiImage] = useState(null)      // 新增状态存储AI图片
   const [isGeneratingImage, setIsGeneratingImage] = useState(false) // 添加加载状态
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false) // 新增：生成提示词状态
+  const [gameHistory, setGameHistory] = useState([]);
+  const [totalScore, setTotalScore] = useState(0);
 
   const resetGameState = () => {
     setDescription('')
@@ -169,11 +171,29 @@ function App() {
   const handleGuess = (guess) => {
     setUserGuess(guess)
     setShowResult(true)
+    
+    // 记录游戏结果
+    const isCorrect = guess === 'ai';
+    const newHistory = [...gameHistory, {
+      round: gameHistory.length + 1,
+      guess,
+      isCorrect
+    }];
+    
+    setGameHistory(newHistory);
+    setTotalScore(newHistory.filter(h => h.isCorrect).length);
+    
+    // 如果已经玩了5轮，可以添加游戏结束的逻辑
+    if (newHistory.length >= 5) {
+      setTimeout(() => {
+        alert(`游戏结束！最终得分：${newHistory.filter(h => h.isCorrect).length}分`);
+      }, 500);
+    }
   }
 
   return (
     <div className="app-container">
-      <h1>AI图像互动游戏</h1>
+      <h1>AI HUNTER</h1>
       <div className="content-wrapper">
         <div className="left-panel">
           <div className="object-selection">
@@ -221,18 +241,43 @@ function App() {
           >
             {isGeneratingPrompt ? "正在生成提示词..." : "生成AI图像"}
           </button>
+
+          {/* 添加外层容器包裹游戏记录 */}
+          <div className="game-history-container">
+            <div className="game-history">
+              <h3>游戏记录 (5轮)</h3>
+              {gameHistory.map((record, index) => (
+                <div 
+                  key={index} 
+                  className={`history-item ${record.isCorrect ? 'correct' : 'incorrect'}`}
+                >
+                  <span>第 {record.round} 轮</span>
+                  <span>{record.isCorrect ? '✓ 答对了！' : '✗ 答错了'}</span>
+                </div>
+              ))}
+              {gameHistory.length > 0 ? (
+                <div className="total-score">
+                  当前得分：{totalScore} / {gameHistory.length}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', opacity: 0.7 }}>
+                  还没有游戏记录
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         
         <div className="right-panel">
           <h2 className="guess-prompt">
-            {isGeneratingImage ? "正在生成图像..." : 
+            {isGeneratingImage || isGeneratingPrompt ? "大语言模型正在推理，请等待..." : 
              aiImage ? "请猜测哪个是AI生成的图片？" : "请选择对象并生成AI图像"}
           </h2>
           <div className="images-container">
-            {(isGeneratingImage || aiImage) ? (
+            {(isGeneratingImage || aiImage || isGeneratingPrompt) ? (
               imagePositions.map((type, index) => (
                 <div key={type} className="image-guess-container">
-                  {isGeneratingImage ? (
+                  {isGeneratingImage || isGeneratingPrompt ? (
                     <div className="loading-placeholder" />
                   ) : (
                     <>
