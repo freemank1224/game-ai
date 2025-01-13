@@ -16,3 +16,6 @@ Pillow==10.0.0
 python-jose==3.3.0
 aiofiles==0.7.0
 websockets==10.0
+tenacity==9.0.0
+typing_extensions==4.12.2
+
