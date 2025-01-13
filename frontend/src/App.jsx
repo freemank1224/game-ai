@@ -25,9 +25,15 @@ function App() {
     setUserGuess(null)
     setIsGeneratingImage(false)
     setIsGeneratingPrompt(false)
-    setRealImage(null)  // 重置真实图片
-    setGameHistory([])  // 重置游戏历史
-    setTotalScore(0)    // 重置总分
+    setRealImage(null)
+    // 移除游戏历史重置相关代码
+  }
+
+  const resetGameHistory = () => {
+    setGameHistory([])
+    setTotalScore(0)
+    setSelectedObject('')
+    resetGameState()
   }
 
   const handleObjectSelect = async (event) => {
@@ -37,13 +43,10 @@ function App() {
     const selectedObjData = presetObjects.find(obj => obj.id === selected)
     if (!selectedObjData) return
 
-    // 重置游戏状态
+    // 只重置当前轮次的状态，不重置游戏历史
     resetGameState()
-
-    // 设置新的真实图片
-    setRealImage(selectedObjData.image)
     
-    // 开始生成新的提示词
+    setRealImage(selectedObjData.image)
     await generatePrompt(selectedObjData)
   }
 
@@ -175,25 +178,23 @@ function App() {
     setUserGuess(guess)
     setShowResult(true)
     
-    const isCorrect = guess === 'ai';
+    const isCorrect = guess === 'ai'
     const newHistory = [...gameHistory, {
       round: gameHistory.length + 1,
       guess,
       isCorrect
-    }];
+    }]
     
-    setGameHistory(newHistory);
-    setTotalScore(newHistory.filter(h => h.isCorrect).length);
+    setGameHistory(newHistory)
+    setTotalScore(newHistory.filter(h => h.isCorrect).length)
     
-    // 如果已经玩了5轮，显示结果并重置游戏
+    // 完成 5 轮后的处理
     if (newHistory.length >= 5) {
+      const finalScore = newHistory.filter(h => h.isCorrect).length
       setTimeout(() => {
-        alert(`游戏结束！最终得分：${newHistory.filter(h => h.isCorrect).length}分`);
-        setGameHistory([]);  // 重置游戏历史
-        setTotalScore(0);    // 重置总分
-        setSelectedObject('')  // 重置选择的对象
-        resetGameState(); // 游戏结束后重置所有状态
-      }, 500);
+        alert(`游戏结束！\n最终得分：${finalScore}分\n点击确定开始新一轮游戏！`)
+        resetGameHistory() // 使用新的重置函数
+      }, 500)
     }
   }
 
@@ -308,10 +309,7 @@ function App() {
             )}
             <div style={{ textAlign: 'center' }}>
               <button 
-                onClick={() => {
-                  setSelectedObject('')  // 重置选择的对象
-                  resetGameState()
-                }} 
+                onClick={resetGameHistory}  // 使用新的重置函数
                 style={{
                   marginTop: '1rem',
                   padding: '0.5rem 1rem',
