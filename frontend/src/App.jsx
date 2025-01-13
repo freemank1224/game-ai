@@ -88,37 +88,32 @@ function App() {
   }
 
   const handleGenerateImage = async () => {
-    setIsGeneratingImage(true) // 开始生成时设置状态
-    let apiEndpoint
-    if (modelType === 'olama') {
-      apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
-    } else if (modelType === 'openai') {
-      apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
-    } else if (modelType === 'gemini') {
-      apiEndpoint = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
-    }
-
+    setIsGeneratingImage(true)
     try {
       const formData = new FormData()
       formData.append('objectName', selectedObject)
-      formData.append('model_type', modelType)
+      formData.append('image_url', realImage)  // 添加真实图片URL
 
-      const response = await fetch(apiEndpoint, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/generate-prompt`, {
         method: 'POST',
         body: formData
       })
       const result = await response.json()
-      setAiImage(result.data.image)  // 保存AI生成的图片
       
-      // 生成随机位置并开始游戏
-      setImagePositions(shuffle(['real', 'ai']))
-      setShowResult(false)
-      setUserGuess(null)
+      if (result.code === 200) {
+        setAiImage(result.data.image)
+        setDescription(result.data.prompt)
+        setImagePositions(shuffle(['real', 'ai']))
+        setShowResult(false)
+        setUserGuess(null)
+      } else {
+        throw new Error(result.message || '生成失败')
+      }
     } catch (error) {
       console.error('Error:', error)
       setAiImage(null)
     } finally {
-      setIsGeneratingImage(false) // 生成完成后重置状态
+      setIsGeneratingImage(false)
     }
   }
 

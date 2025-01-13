@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 from llm_handlers import LLMFactory
 from vision_handler import VisionModelHandler
+from comfy_handler import ComfyUIHandler
 import base64
 
 # 加载环境变量，优先使用自定义环境变量文件
@@ -73,6 +74,9 @@ class ResponseModel:
 # 创建vision模型处理器实例
 vision_handler = VisionModelHandler()
 
+# 创建ComfyUI处理器实例
+comfy_handler = ComfyUIHandler()
+
 @app.post("/analyze-image")
 async def analyze_image(image: UploadFile = File(...)):
     """处理图片识别请求"""
@@ -108,28 +112,38 @@ async def upload_image(image: UploadFile = File(...)):
 
 @app.post("/generate-prompt")
 async def generate_prompt(objectName: str = Form(...), image_url: Optional[str] = Form(None)):
-    """从图片生成提示词"""
+    """从图片生成提示词并生成图片"""
     try:
         print(f"Debug - Starting generate_prompt: objectName={objectName}, image_url={image_url}")
         
         if not image_url:
-            print("Debug - No image URL provided")
             return ResponseModel.error("需要提供图片URL", 400)
 
         try:
+            # 1. 生成图片描述
             description = await vision_handler.analyze_image(
                 image_url,
                 f"Please describe this {objectName} in detail, focusing on its visual characteristics."
             )
             print(f"Debug - Generated description: {description}")
             
-            return ResponseModel.success({
-                "prompt": description,
-            })
+            # 2. 使用ComfyUI生成图片
+            try:
+                ai_image_url = await comfy_handler.generate_image(description)
+                print(f"Debug - Generated image URL: {ai_image_url}")
+                
+                return ResponseModel.success({
+                    "prompt": description,
+                    "image": ai_image_url
+                })
+            except Exception as e:
+                print(f"Debug - ComfyUI error: {str(e)}")
+                return ResponseModel.error(f"图片生成失败: {str(e)}")
+                
         except Exception as e:
-            print(f"Debug - Vision model error: {str(e)}")
-            return ResponseModel.error(f"Vision模型错误: {str(e)}")
+            print(f"Debug - Processing error: {str(e)}")
+            return ResponseModel.error(f"处理失败: {str(e)}")
             
     except Exception as e:
-        print(f"Debug - General error in generate_prompt: {str(e)}")
-        return ResponseModel.error(f"生成提示词失败: {str(e)}")
+        print(f"Debug - General error: {str(e)}")
+        return ResponseModel.error(f"生成失败: {str(e)}")
