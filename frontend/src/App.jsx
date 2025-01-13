@@ -14,6 +14,7 @@ function App() {
   const [realImage, setRealImage] = useState(null)  // 新增状态存储真实图片
   const [aiImage, setAiImage] = useState(null)      // 新增状态存储AI图片
   const [isGeneratingImage, setIsGeneratingImage] = useState(false) // 添加加载状态
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false) // 新增：生成提示词状态
 
   const handleObjectSelect = async (event) => {
     const selected = event.target.value
@@ -23,22 +24,26 @@ function App() {
     if (!selectedObjData) return
 
     setRealImage(selectedObjData.image)
-    setIsLoading(true)
+    setDescription('')  // 清空当前描述
+    await generatePrompt(selectedObjData)  // 调用生成提示词函数
+  }
+
+  const generatePrompt = async (objData) => {
+    setIsGeneratingPrompt(true)  // 开始生成提示词
     try {
-        // 修改请求URL和格式
-        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/generate-prompt`
+        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/analyze-image`
         console.log('Debug - API URL:', apiUrl)
         
         const formData = new FormData()
-        formData.append('objectName', selectedObjData.name)
-        formData.append('image_url', selectedObjData.image)
+        formData.append('objectName', objData.name)
+        formData.append('image_url', objData.image)
+        formData.append('model_type', modelType)
 
         const response = await fetch(apiUrl, {
             method: 'POST',
             body: formData
         })
         
-        console.log('Debug - Response:', response.status)
         const result = await response.json()
         console.log('Debug - Result:', result)
         
@@ -51,9 +56,19 @@ function App() {
         console.error('Debug - Error:', error)
         setDescription('生成描述失败，请重试')
     } finally {
-        setIsLoading(false)
+        setIsGeneratingPrompt(false)
     }
   }
+
+  // 监听模型类型变化，重新生成提示词
+  useEffect(() => {
+    if (selectedObject) {
+      const objData = presetObjects.find(obj => obj.id === selectedObject)
+      if (objData) {
+        generatePrompt(objData)
+      }
+    }
+  }, [modelType])
 
   const handleImageUpload = async (event) => {
     event.preventDefault()
@@ -90,19 +105,18 @@ function App() {
   const handleGenerateImage = async () => {
     setIsGeneratingImage(true)
     try {
+      const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/generate-image`
       const formData = new FormData()
-      formData.append('objectName', selectedObject)
-      formData.append('image_url', realImage)  // 添加真实图片URL
+      formData.append('prompt', description)
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/generate-prompt`, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData
       })
       const result = await response.json()
       
       if (result.code === 200) {
-        setAiImage(result.data.image)
-        setDescription(result.data.prompt)
+        setAiImage(result.data.image_url)
         setImagePositions(shuffle(['real', 'ai']))
         setShowResult(false)
         setUserGuess(null)
@@ -182,15 +196,15 @@ function App() {
             value={description} 
             readOnly 
             className="description-box" 
-            placeholder="这里将显示生成的描述词..."
+            placeholder={isGeneratingPrompt ? "AI正在识别图像，生成提示词..." : "这里将显示生成的描述词..."}
           />
           
           <button 
             onClick={handleGenerateImage} 
             className="generate-button"
-            disabled={!description}
+            disabled={!description || isGeneratingPrompt}
           >
-            生成AI图像
+            {isGeneratingPrompt ? "正在生成提示词..." : "生成AI图像"}
           </button>
         </div>
         
