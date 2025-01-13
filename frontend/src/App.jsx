@@ -4,7 +4,7 @@ import { presetObjects } from './config/objects'
 
 function App() {
   const [response, setResponse] = useState(null)
-  const [modelType, setModelType] = useState('olama')
+  const [modelType, setModelType] = useState('ollama')
   const [description, setDescription] = useState('')
   const [selectedObject, setSelectedObject] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -25,6 +25,9 @@ function App() {
     setUserGuess(null)
     setIsGeneratingImage(false)
     setIsGeneratingPrompt(false)
+    setRealImage(null)  // 重置真实图片
+    setGameHistory([])  // 重置游戏历史
+    setTotalScore(0)    // 重置总分
   }
 
   const handleObjectSelect = async (event) => {
@@ -172,7 +175,6 @@ function App() {
     setUserGuess(guess)
     setShowResult(true)
     
-    // 记录游戏结果
     const isCorrect = guess === 'ai';
     const newHistory = [...gameHistory, {
       round: gameHistory.length + 1,
@@ -183,10 +185,14 @@ function App() {
     setGameHistory(newHistory);
     setTotalScore(newHistory.filter(h => h.isCorrect).length);
     
-    // 如果已经玩了5轮，可以添加游戏结束的逻辑
+    // 如果已经玩了5轮，显示结果并重置游戏
     if (newHistory.length >= 5) {
       setTimeout(() => {
         alert(`游戏结束！最终得分：${newHistory.filter(h => h.isCorrect).length}分`);
+        setGameHistory([]);  // 重置游戏历史
+        setTotalScore(0);    // 重置总分
+        setSelectedObject('')  // 重置选择的对象
+        resetGameState(); // 游戏结束后重置所有状态
       }, 500);
     }
   }
@@ -221,7 +227,7 @@ function App() {
               onChange={(e) => setModelType(e.target.value)}
               className="model-select"
             >
-              <option value="olama">Olama</option>
+              <option value="ollama">Ollama</option>
               <option value="openai">OpenAI</option>
               <option value="gemini">Google Gemini</option>
             </select>
@@ -242,28 +248,83 @@ function App() {
             {isGeneratingPrompt ? "正在生成提示词..." : "生成AI图像"}
           </button>
 
-          {/* 添加外层容器包裹游戏记录 */}
-          <div className="game-history-container">
-            <div className="game-history">
-              <h3>游戏记录 (5轮)</h3>
-              {gameHistory.map((record, index) => (
-                <div 
-                  key={index} 
-                  className={`history-item ${record.isCorrect ? 'correct' : 'incorrect'}`}
-                >
-                  <span>第 {record.round} 轮</span>
-                  <span>{record.isCorrect ? '✓ 答对了！' : '✗ 答错了'}</span>
-                </div>
-              ))}
-              {gameHistory.length > 0 ? (
-                <div className="total-score">
-                  当前得分：{totalScore} / {gameHistory.length}
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', opacity: 0.7 }}>
-                  还没有游戏记录
-                </div>
-              )}
+          {/* 简化的游戏记录容器 */}
+          <div style={{
+            marginTop: '2.5rem',
+            padding: '2rem',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(188, 175, 155, 0.15)', // 温暖的米褐色
+            border: '1px solid rgba(171, 155, 132, 0.3)', // 浅棕色边框
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+          }}>
+            <h3 style={{
+              margin: '0 0 1.8rem 0',
+              color: 'rgba(108, 92, 69, 0.95)', // 暖棕色文字
+              fontSize: '1.25rem',
+              textAlign: 'center',
+              letterSpacing: '0.5px'
+            }}>游戏记录 (5轮)</h3>
+            
+            {gameHistory.map((record, index) => (
+              <div 
+                key={index}
+                style={{
+                  marginBottom: '1rem',
+                  padding: '1rem 1.2rem',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(188, 175, 155, 0.1)', // 更浅的米色
+                  color: 'rgba(171, 155, 132, 0.95)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderLeft: record.isCorrect ? 
+                    '3px solid rgba(156, 180, 130, 0.8)' : // 正确时的边框色
+                    '3px solid rgba(164, 128, 115, 0.8)', // 错误时的边框色
+                }}
+              >
+                <span>第 {record.round} 轮</span>
+                <span>{record.isCorrect ? '✓ 答对了！' : '✗ 答错了'}</span>
+              </div>
+            ))}
+            
+            {gameHistory.length > 0 ? (
+              <div style={{
+                marginTop: '1.5rem',
+                color: 'rgba(171, 155, 132, 0.95)',
+                textAlign: 'center',
+                fontSize: '1.2rem',
+                fontWeight: '500'
+              }}>
+                当前得分：{totalScore} / {gameHistory.length}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                color: 'rgba(171, 155, 132, 0.7)',
+                padding: '1rem'
+              }}>
+                还没有游戏记录
+              </div>
+            )}
+            <div style={{ textAlign: 'center' }}>
+              <button 
+                onClick={() => {
+                  setSelectedObject('')  // 重置选择的对象
+                  resetGameState()
+                }} 
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  color: '#fff',
+                  backgroundColor: '#f44336', // 红色背景
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                重置游戏
+              </button>
             </div>
           </div>
         </div>
@@ -284,7 +345,11 @@ function App() {
                       <img
                         src={type === 'real' ? realImage : aiImage}
                         alt={type}
-                        className={`image ${showResult && userGuess === type ? 'selected' : ''}`}
+                        className={`image ${
+                          showResult && userGuess === type 
+                            ? `selected-image ${type === 'ai' ? 'correct' : 'incorrect'}`
+                            : ''
+                        }`}
                         onClick={() => !showResult && handleGuess(type)}
                       />
                       <button 
