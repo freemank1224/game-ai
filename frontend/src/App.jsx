@@ -51,11 +51,18 @@ function App() {
   }
 
   const generatePrompt = async (objData) => {
-    setIsGeneratingPrompt(true)  // 开始生成提示词
+    setIsGeneratingPrompt(true)
     try {
-        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/analyze-image`
-        console.log('Debug - API URL:', apiUrl)
-        
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://192.168.1.2:8000'
+        const apiUrl = `${backendUrl}/analyze-image`
+        console.log('使用的后端地址:', backendUrl)
+        console.log('请求地址:', apiUrl)
+        console.log('请求参数:', {
+            objectName: objData.name,
+            image_url: objData.image,
+            model_type: modelType
+        })
+
         const formData = new FormData()
         formData.append('objectName', objData.name)
         formData.append('image_url', objData.image)
@@ -63,11 +70,16 @@ function App() {
 
         const response = await fetch(apiUrl, {
             method: 'POST',
-            body: formData
+            body: formData,
+            // 添加必要的请求头
+            headers: {
+                'Accept': 'application/json',
+            },
         })
         
+        console.log('响应状态:', response.status)
         const result = await response.json()
-        console.log('Debug - Result:', result)
+        console.log('响应数据:', result)
         
         if (result.code === 200) {
             setDescription(result.data.prompt)
@@ -75,7 +87,7 @@ function App() {
             throw new Error(result.message || '请求失败')
         }
     } catch (error) {
-        console.error('Debug - Error:', error)
+        console.error('详细错误:', error)
         setDescription('生成描述失败，请重试')
     } finally {
         setIsGeneratingPrompt(false)
@@ -128,29 +140,32 @@ function App() {
   const handleGenerateImage = async () => {
     setIsGeneratingImage(true)
     try {
-      const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/generate-image`
-      const formData = new FormData()
-      formData.append('prompt', description)
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://192.168.1.2:8000'
+        const apiUrl = `${backendUrl}/generate-image`
+        const formData = new FormData()
+        formData.append('prompt', description)
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData
-      })
-      const result = await response.json()
-      
-      if (result.code === 200) {
-        setAiImage(result.data.image_url)
-        setImagePositions(shuffle(['real', 'ai']))
-        setShowResult(false)
-        setUserGuess(null)
-      } else {
-        throw new Error(result.message || '生成失败')
-      }
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            body: formData
+        })
+        const result = await response.json()
+        console.log('生成图片响应:', result)  // 添加调试日志
+        
+        if (result.code === 200 && result.data.image_url) {
+            console.log('设置 AI 图片 URL:', result.data.image_url)  // 添加调试日志
+            setAiImage(result.data.image_url)
+            setImagePositions(shuffle(['real', 'ai']))
+            setShowResult(false)
+            setUserGuess(null)
+        } else {
+            throw new Error(result.message || '生成失败')
+        }
     } catch (error) {
-      console.error('Error:', error)
-      setAiImage(null)
+        console.error('生成图片错误:', error)
+        setAiImage(null)
     } finally {
-      setIsGeneratingImage(false)
+        setIsGeneratingImage(false)
     }
   }
 
@@ -377,6 +392,13 @@ function App() {
               </>
             )}
           </div>
+          {/* 添加调试信息显示 */}
+          {import.meta.env.DEV && (
+            <div style={{position: 'fixed', top: 0, right: 0, background: '#fff', padding: '10px', fontSize: '12px'}}>
+                <div>Real Image: {realImage}</div>
+                <div>AI Image: {aiImage}</div>
+            </div>
+          )}
         </div>
       </div>
       {isLoading && <div className="loading">处理中...</div>}

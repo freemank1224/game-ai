@@ -89,7 +89,7 @@ class ComfyUIHandler:
                     raise Exception(f"提交工作流失败: {str(e)}")
 
                 # 3. 等待生成完成
-                max_retries = 300  # 最多等待60秒
+                max_retries = 120  # 最多等待120秒
                 retries = 0
                 while retries < max_retries:
                     try:

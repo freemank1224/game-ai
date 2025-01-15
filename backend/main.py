@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Optional  # 添加这行导入
 import requests
 import os
@@ -9,6 +10,8 @@ from llm_handlers import LLMFactory
 from vision_handler import VisionModelHandler
 from comfy_handler import ComfyUIHandler
 import base64
+import shutil
+from pathlib import Path
 
 # 加载环境变量，优先使用自定义环境变量文件
 env_file = os.getenv('ENV_FILE', '.env')
@@ -19,11 +22,19 @@ app = FastAPI()
 # 允许前端访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 临时允许所有来源，仅用于测试
-    allow_credentials=True,
+    allow_origins=["*"],  # 允许所有源
+    allow_credentials=False,  # 改为 False，因为使用 "*" 时不能为 True
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
+
+# 创建图片存储目录（如果不存在）
+IMAGES_DIR = Path("static/images")
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
+# 挂载静态文件目录
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 单独添加文件大小限制配置
 @app.middleware("http")
@@ -42,8 +53,14 @@ async def add_request_size_limit(request, call_next):
 @app.on_event("startup")
 async def startup():
     """应用启动时的初始化操作"""
-    # 可以添加数据库连接等初始化操作
-    pass
+    # 检查必要的环境变量
+    comfy_output_dir = os.getenv('COMFY_UI_OUTPUT_DIR')
+    if not comfy_output_dir:
+        print("警告: COMFY_UI_OUTPUT_DIR 环境变量未设置，将使用默认路径")
+    else:
+        print(f"ComfyUI 输出目录: {comfy_output_dir}")
+        if not os.path.exists(comfy_output_dir):
+            print(f"警告: ComfyUI 输出目录不存在: {comfy_output_dir}")
 
 @app.get("/health")
 async def health_check():
@@ -95,12 +112,78 @@ async def analyze_image(
 
 @app.post("/generate-image")
 async def generate_image(prompt: str = Form(...)):
-    """使用ComfyUI生成图片"""
+    """使用ComfyUI生成图片并保存到本地"""
     try:
-        ai_image_url = await comfy_handler.generate_image(prompt)
-        return ResponseModel.success({"image_url": ai_image_url})
+        # 获取 ComfyUI 生成的图片
+        comfy_image_url = await comfy_handler.generate_image(prompt)
+        print(f"Debug - ComfyUI returned URL: {comfy_image_url}")
+        
+        if comfy_image_url:
+            # 从 URL 中提取实际的文件名
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(comfy_image_url)
+            query_params = parse_qs(parsed_url.query)
+            filename = query_params.get('filename', [''])[0]
+            
+            print(f"Debug - Extracted filename: {filename}")
+            
+            # 使用环境变量中的输出目录，如果未设置则使用默认路径
+            comfy_output_dir = os.getenv('COMFY_UI_OUTPUT_DIR')
+            if not comfy_output_dir:
+                comfy_output_dir = os.path.join(os.path.expanduser('~'), 'Documents/ComfyUI/output')
+                print(f"Debug - Using default output directory: {comfy_output_dir}")
+            else:
+                print(f"Debug - Using configured output directory: {comfy_output_dir}")
+            
+            if not os.path.exists(comfy_output_dir):
+                print(f"Warning - Directory does not exist: {comfy_output_dir}")
+                os.makedirs(comfy_output_dir, exist_ok=True)
+                print(f"Created directory: {comfy_output_dir}")
+            
+            local_comfy_path = os.path.join(comfy_output_dir, filename)
+            print(f"Debug - Looking for file at: {local_comfy_path}")
+            
+            if os.path.exists(local_comfy_path):
+                print(f"Debug - File found at {local_comfy_path}")
+                # 确保目标目录存在
+                os.makedirs(IMAGES_DIR, exist_ok=True)
+                
+                # 复制到后端静态目录
+                dest_path = IMAGES_DIR / filename
+                print(f"Debug - Copying to: {dest_path}")
+                
+                shutil.copy2(local_comfy_path, dest_path)
+                print(f"Debug - File copied successfully")
+                
+                # 返回可访问的URL
+                public_url = f"{os.getenv('BACKEND_ENDPOINT', 'http://192.168.1.2:8000')}/static/images/{filename}"
+                print(f"Debug - Public URL: {public_url}")
+                print(f"Debug - File exists in static dir: {os.path.exists(dest_path)}")  # 添加调试日志
+                
+                return ResponseModel.success({"image_url": public_url})
+            else:
+                print(f"Debug - File not found at {local_comfy_path}")
+                # 列出目录内容以帮助调试
+                if os.path.exists(comfy_output_dir):
+                    print(f"Debug - Contents of {comfy_output_dir}:")
+                    print(os.listdir(comfy_output_dir))
+                else:
+                    print(f"Debug - Directory {comfy_output_dir} does not exist")
+                raise FileNotFoundError(f"ComfyUI生成的图片未找到: {local_comfy_path}")
+        else:
+            raise Exception("图片生成失败")
     except Exception as e:
+        print(f"Error generating image: {str(e)}")
         return ResponseModel.error(str(e))
+
+# 添加一个图片代理接口（可选，用于调试）
+@app.get("/proxy-image/{filename}")
+async def proxy_image(filename: str):
+    """代理 ComfyUI 图片访问"""
+    file_path = IMAGES_DIR / filename
+    if not file_path.exists():
+        return ResponseModel.error("Image not found", 404)
+    return FileResponse(file_path)
 
 @app.post("/upload")
 async def upload_image(image: UploadFile = File(...)):
@@ -122,6 +205,15 @@ async def upload_image(image: UploadFile = File(...)):
         })
     except Exception as e:
         return ResponseModel.error(str(e))
+
+# 添加一个用于测试的端点
+@app.get("/test-image/{filename}")
+async def test_image(filename: str):
+    """测试图片访问"""
+    file_path = IMAGES_DIR / filename
+    if file_path.exists():
+        return FileResponse(file_path)
+    return ResponseModel.error("Image not found", 404)
 
 # 移除或注释掉原有的generate-prompt路由
 # @app.post("/generate-prompt")
@@ -161,3 +253,14 @@ async def upload_image(image: UploadFile = File(...)):
 #     except Exception as e:
 #         print(f"Debug - General error: {str(e)}")
 #         return ResponseModel.error(f"生成失败: {str(e)}")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app, 
+        host="0.0.0.0",     # 修改为监听所有网络接口
+        log_level="debug",
+        port=8000,
+        reload=True,         # 开发模式下启用热重载
+        access_log=True
+    )
