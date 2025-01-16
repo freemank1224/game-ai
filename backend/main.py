@@ -45,6 +45,10 @@ IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 # 挂载静态文件目录
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# 添加前端静态目录配置
+FRONTEND_STATIC_DIR = Path("../frontend/public/static/images")
+FRONTEND_STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
 # 单独添加文件大小限制配置
 @app.middleware("http")
 async def add_request_size_limit(request, call_next):
@@ -164,12 +168,18 @@ async def generate_image(prompt: str = Form(...)):
                 shutil.copy2(local_comfy_path, dest_path)
                 print(f"Debug - File copied successfully")
                 
+                # 复制文件到前端静态目录
+                frontend_path = FRONTEND_STATIC_DIR / filename
+                shutil.copy2(local_comfy_path, frontend_path)
+                
                 # 返回可访问的URL
                 public_url = f"{os.getenv('BACKEND_ENDPOINT')}/static/images/{filename}"
                 print(f"Debug - Public URL: {public_url}")
                 print(f"Debug - File exists in static dir: {os.path.exists(dest_path)}")  # 添加调试日志
                 
-                return ResponseModel.success({"image_url": public_url})
+                return ResponseModel.success({
+                    "image_url": filename  # 只返回文件名，不包含完整路径
+                })
             else:
                 print(f"Debug - File not found at {local_comfy_path}")
                 # 列出目录内容以帮助调试
@@ -224,44 +234,24 @@ async def test_image(filename: str):
         return FileResponse(file_path)
     return ResponseModel.error("Image not found", 404)
 
-# 移除或注释掉原有的generate-prompt路由
-# @app.post("/generate-prompt")
-# async def generate_prompt(objectName: str = Form(...), image_url: Optional[str] = Form(None)):
-#     """从图片生成提示词并生成图片"""
-#     try:
-#         print(f"Debug - Starting generate_prompt: objectName={objectName}, image_url={image_url}")
+@app.post("/clear-images")
+async def clear_images():
+    """清理所有生成的图片"""
+    try:
+        # 清理前端static目录下的图片
+        for file in FRONTEND_STATIC_DIR.glob("*"):
+            if file.is_file() and not file.name.startswith('.'):
+                file.unlink()
         
-#         if not image_url:
-#             return ResponseModel.error("需要提供图片URL", 400)
-
-#         try:
-#             # 1. 生成图片描述
-#             description = await vision_handler.analyze_image(
-#                 image_url,
-#                 f"Please describe this {objectName} in detail, focusing on its visual characteristics."
-#             )
-#             print(f"Debug - Generated description: {description}")
-            
-#             # 2. 使用ComfyUI生成图片
-#             try:
-#                 ai_image_url = await comfy_handler.generate_image(description)
-#                 print(f"Debug - Generated image URL: {ai_image_url}")
+        # 清理后端static目录下的图片
+        for file in IMAGES_DIR.glob("*"):
+            if file.is_file() and not file.name.startswith('.'):
+                file.unlink()
                 
-#                 return ResponseModel.success({
-#                     "prompt": description,
-#                     "image": ai_image_url
-#                 })
-#             except Exception as e:
-#                 print(f"Debug - ComfyUI error: {str(e)}")
-#                 return ResponseModel.error(f"图片生成失败: {str(e)}")
-                
-#         except Exception as e:
-#             print(f"Debug - Processing error: {str(e)}")
-#             return ResponseModel.error(f"处理失败: {str(e)}")
-            
-#     except Exception as e:
-#         print(f"Debug - General error: {str(e)}")
-#         return ResponseModel.error(f"生成失败: {str(e)}")
+        return ResponseModel.success(message="图片清理完成")
+    except Exception as e:
+        print(f"清理图片出错: {str(e)}")
+        return ResponseModel.error(f"清理图片失败: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

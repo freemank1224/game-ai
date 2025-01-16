@@ -29,12 +29,28 @@ function App() {
     // 移除游戏历史重置相关代码
   }
 
-  const resetGameHistory = () => {
-    setGameHistory([])
-    setTotalScore(0)
-    setSelectedObject('')
-    resetGameState()
-  }
+  const clearImages = async () => {
+    try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL;
+        const response = await fetch(`${backendUrl}/clear-images`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        if (data.code !== 200) {
+            console.error('清理图片失败:', data.message);
+        }
+    } catch (error) {
+        console.error('清理图片错误:', error);
+    }
+};
+
+const resetGameHistory = async () => {
+    await clearImages();  // 添加清理图片的调用
+    setGameHistory([]);
+    setTotalScore(0);
+    setSelectedObject('');
+    resetGameState();
+};
 
   const handleObjectSelect = async (event) => {
     const selected = event.target.value
@@ -145,7 +161,8 @@ function App() {
     setIsGeneratingImage(true)
     try {
         const backendUrl = import.meta.env.VITE_BACKEND_URL
-        console.log('backendURL：', backendUrl)
+        const frontendImageUrl=import.meta.env.VITE_IMAGE_FOLDER
+
         if (!backendUrl) {
             throw new Error('Backend URL not configured')
         }
@@ -161,14 +178,9 @@ function App() {
         console.log('生成图片响应:', result)
         
         if (result.code === 200 && result.data.image_url) {
-            // 检查返回的URL是否是完整路径
-            const imageUrl = result.data.image_url
-            // 如果返回的是相对路径（不包含http），则拼接完整路径
-            const fullImageUrl = imageUrl.startsWith('http') 
-                ? imageUrl 
-                : `${backendUrl}/static/images/${imageUrl}`
-            
-            console.log('完整图片URL:', fullImageUrl)
+            // 修改图片URL构建逻辑，添加 public 目录
+            const fullImageUrl = `${window.location.origin}${frontendImageUrl}${result.data.image_url}`
+            console.log('图片URL:', fullImageUrl)
             setAiImage(fullImageUrl)
             setImagePositions(shuffle(['real', 'ai']))
             setShowResult(false)
@@ -220,11 +232,11 @@ function App() {
     
     // 完成 5 轮后的处理
     if (newHistory.length >= 5) {
-      const finalScore = newHistory.filter(h => h.isCorrect).length
-      setTimeout(() => {
-        alert(`游戏结束！\n最终得分：${finalScore}分\n点击确定开始新一轮游戏！`)
-        resetGameHistory() // 使用新的重置函数
-      }, 500)
+        const finalScore = newHistory.filter(h => h.isCorrect).length;
+        setTimeout(async () => {
+            alert(`游戏结束！\n最终得分：${finalScore}分\n点击确定开始新一轮游戏！`);
+            await resetGameHistory();  // 使用异步版本的resetGameHistory
+        }, 500);
     }
   }
 

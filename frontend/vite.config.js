@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig(({ mode }) => {
-  // 明确指定环境变量目录
   const envDir = path.resolve(__dirname)
   const env = loadEnv(mode, envDir, 'VITE_')
   
@@ -19,7 +18,13 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
     },
-    envDir, // 明确指定环境变量目录
-    envPrefix: 'VITE_', // 明确指定环境变量前缀
+    build: {
+      assetsDir: 'static',
+    },
+    // 修改静态资源配置
+    publicDir: path.resolve(__dirname, 'public'),
+    base: '/', // 确保基础路径配置正确
+    envDir,
+    envPrefix: 'VITE_',
   }
 })
