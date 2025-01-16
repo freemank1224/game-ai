@@ -278,7 +278,6 @@ const resetGameHistory = async () => {
           
           <textarea 
             value={description} 
-            readOnly 
             className="description-box" 
             placeholder={isGeneratingPrompt ? "AI正在识别图像，生成提示词..." : "这里将显示生成的描述词..."}
           />
@@ -286,9 +285,11 @@ const resetGameHistory = async () => {
           <button 
             onClick={handleGenerateImage} 
             className="generate-button"
-            disabled={!description || isGeneratingPrompt}
+            disabled={!description || isGeneratingPrompt || isGeneratingImage}
           >
-            {isGeneratingPrompt ? "正在生成提示词..." : "生成AI图像"}
+            {isGeneratingPrompt ? "正在生成提示词..." : 
+             isGeneratingImage ? "正在生成AI图像..." : 
+             "生成AI图像"}
           </button>
 
           {/* 简化的游戏记录容器 */}
