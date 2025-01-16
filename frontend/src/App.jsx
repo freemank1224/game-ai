@@ -420,13 +420,7 @@ const resetGameHistory = async () => {
               </>
             )}
           </div>
-          {/* 添加调试信息显示 */}
-          {import.meta.env.DEV && (
-            <div style={{position: 'fixed', top: 0, right: 0, background: '#fff', padding: '10px', fontSize: '12px'}}>
-                <div>Real Image: {realImage}</div>
-                <div>AI Image: {aiImage}</div>
-            </div>
-          )}
+          {/* 删除调试信息显示部分 */}
         </div>
       </div>
       {isLoading && <div className="loading">处理中...</div>}
