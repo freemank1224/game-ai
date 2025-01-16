@@ -1,12 +1,12 @@
 export const languages = [
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'el', name: 'Ελληνικά', flag: '🇬🇷' }
+  { code: 'zh', name: '中文', symbol: 'CN' },
+  { code: 'en', name: 'English', symbol: 'EN' },
+  { code: 'el', name: 'Ελληνικά', symbol: 'GR' }
 ];
 
 export const translations = {
   zh: {
-    title: 'AI 猎人',
+    title: 'AI图像捕手',
     selectObject: '选择对象',
     selectModel: '选择大语言模型',
     generateImage: '生成AI图像',
@@ -29,10 +29,11 @@ export const translations = {
     gameOver: '游戏结束！\n最终得分：{score}分\n点击确定开始新一轮游戏！',
     imagePlaceholder: '等待图片...',
     textareaPlaceholder: '这里将显示生成的描述词...',
-    textareaGenerating: 'AI正在识别图像，生成提示词...'
+    textareaGenerating: 'AI正在识别图像，生成提示词...',
+    chooseButton: '选择这张图片'
   },
   en: {
-    title: 'AI Hunter',
+    title: 'AI Image Hunter',
     selectObject: 'Select Object',
     selectModel: 'Select Language Model',
     generateImage: 'Generate AI Image',
@@ -55,7 +56,8 @@ export const translations = {
     gameOver: 'Game Over!\nFinal Score: {score}\nClick OK to start a new game!',
     imagePlaceholder: 'Waiting for image...',
     textareaPlaceholder: 'Generated description will appear here...',
-    textareaGenerating: 'AI is analyzing image and generating prompts...'
+    textareaGenerating: 'AI is analyzing image and generating prompts...',
+    chooseButton: 'Choose This Image'
   },
   el: {
     title: 'Κυνηγός AI',
@@ -81,7 +83,8 @@ export const translations = {
     gameOver: 'Τέλος Παιχνιδιού!\nΤελικό Σκορ: {score}\nΚάντε κλικ στο OK για νέο παιχνίδι!',
     imagePlaceholder: 'Αναμονή για εικόνα...',
     textareaPlaceholder: 'Η περιγραφή θα εμφανιστεί εδώ...',
-    textareaGenerating: 'Η AI αναλύει την εικόνα και δημιουργεί προτροπές...'
+    textareaGenerating: 'Η AI αναλύει την εικόνα και δημιουργεί προτροπές...',
+    chooseButton: 'Επιλέξτε Αυτή την Εικόνα'
   }
 };
 

@@ -368,7 +368,7 @@ const handleObjectSelect = async (event) => {
         >
           {languages.map(lang => (
             <option key={lang.code} value={lang.code}>
-              {lang.flag} {lang.name}
+              [{lang.symbol}] {lang.name}
             </option>
           ))}
         </select>
@@ -447,27 +447,39 @@ const handleObjectSelect = async (event) => {
               letterSpacing: '0.5px'
             }}>{t.gameRecords}</h3>
             
-            {gameHistory.map((record, index) => (
-              <div 
-                key={index}
-                style={{
-                  marginBottom: '1rem',
-                  padding: '1rem 1.2rem',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(188, 175, 155, 0.1)', // 更浅的米色
-                  color: 'rgba(171, 155, 132, 0.95)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderLeft: record.isCorrect ? 
-                    '3px solid rgba(156, 180, 130, 0.8)' : // 正确时的边框色
-                    '3px solid rgba(164, 128, 115, 0.8)', // 错误时的边框色
-                }}
-              >
-                <span>{t.round} {record.round}</span>
-                <span>{record.isCorrect ? t.correct : t.incorrect}</span>
-              </div>
-            ))}
+            <div className="game-records">
+              {gameHistory.map((record, index) => (
+                <div 
+                  key={index}
+                  style={{
+                    marginBottom: '1rem',
+                    padding: '1rem 1.2rem',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(188, 175, 155, 0.1)', // 更浅的米色
+                    color: 'rgba(171, 155, 132, 0.95)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderLeft: record.isCorrect ? 
+                      '3px solid rgba(156, 180, 130, 0.8)' : // 正确时的边框色
+                      '3px solid rgba(164, 128, 115, 0.8)', // 错误时的边框色
+                  }}
+                >
+                  {/* 修正变量替换逻辑 */}
+                  <span>{t.round.replace('{n}', record.round)}</span>
+                  <span>{record.isCorrect ? t.correct : t.incorrect}</span>
+                </div>
+              ))}
+              
+              {gameHistory.length >= 5 && (
+                setTimeout(async () => {
+                  // 修正得分显示的变量替换
+                  const finalScore = gameHistory.filter(h => h.isCorrect).length;
+                  alert(t.gameOver.replace('{score}', finalScore));
+                  await resetGameHistory();
+                }, 500)
+              )}
+            </div>
             
             {gameHistory.length > 0 ? (
               <div style={{
@@ -536,7 +548,7 @@ const handleObjectSelect = async (event) => {
                         onClick={() => !showResult && handleGuess(type)}
                         disabled={showResult}
                       >
-                        {t.selectThis}
+                        {t.chooseButton}
                       </button>
                       {showResult && (
                         <div className={`result-badge ${type === userGuess ? (type === 'ai' ? 'correct' : 'incorrect') : ''}`}>
