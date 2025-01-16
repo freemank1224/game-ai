@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import { presetObjects, categories } from './config/objects'
+import { languages, translations, objectTranslations } from './config/languages'
 
 const UNSPLASH_API_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
 
@@ -19,6 +20,8 @@ function App() {
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false) // 新增：生成提示词状态
   const [gameHistory, setGameHistory] = useState([]);
   const [totalScore, setTotalScore] = useState(0);
+  const [language, setLanguage] = useState('zh') // 添加语言状态
+  const t = translations[language] // 获取当前语言的翻译
 
   const resetGameState = () => {
     setDescription('')
@@ -349,27 +352,47 @@ const handleObjectSelect = async (event) => {
     }
   }
 
+  // 添加语言切换处理函数
+  const handleLanguageChange = (event) => {
+    setLanguage(event.target.value)
+  }
+
   return (
     <div className="app-container">
-      <h1>AI HUNTER</h1>
+      {/* 添加语言选择器 */}
+      <div className="language-selector">
+        <select
+          value={language}
+          onChange={handleLanguageChange}
+          className="language-select"
+        >
+          {languages.map(lang => (
+            <option key={lang.code} value={lang.code}>
+              {lang.flag} {lang.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <h1>{t.title}</h1>
       <div className="content-wrapper">
         <div className="left-panel">
           <div className="object-selection">
-            <label htmlFor="object-select">选择对象:</label>
+            <label htmlFor="object-select">{t.selectObject}:</label>
             <select 
               id="object-select" 
               value={selectedObject}
               onChange={handleObjectSelect}
               className="object-select"
             >
-              <option value="">请选择一个对象</option>
-              {Object.entries(categories).map(([category, categoryName]) => (
-                <optgroup key={category} label={categoryName}>
+              <option value="">{t.pleaseSelect}</option>
+              {Object.entries(categories).map(([category, _]) => (
+                <optgroup key={category} label={objectTranslations[language].categories[category]}>
                   {presetObjects
                     .filter(obj => obj.category === category)
                     .map(obj => (
                       <option key={obj.id} value={obj.id}>
-                        {obj.name}
+                        {objectTranslations[language].objects[obj.id]}
                       </option>
                     ))}
                 </optgroup>
@@ -378,7 +401,7 @@ const handleObjectSelect = async (event) => {
           </div>
           
           <div className="model-selection">
-            <label htmlFor="model-select">选择大语言模型:</label>
+            <label htmlFor="model-select">{t.selectModel}:</label>
             <select 
               id="model-select" 
               value={modelType} 
@@ -394,7 +417,7 @@ const handleObjectSelect = async (event) => {
           <textarea 
             value={description} 
             className="description-box" 
-            placeholder={isGeneratingPrompt ? "AI正在识别图像，生成提示词..." : "这里将显示生成的描述词..."}
+            placeholder={isGeneratingPrompt ? t.textareaGenerating : t.textareaPlaceholder}
           />
           
           <button 
@@ -402,9 +425,9 @@ const handleObjectSelect = async (event) => {
             className="generate-button"
             disabled={!description || isGeneratingPrompt || isGeneratingImage}
           >
-            {isGeneratingPrompt ? "正在生成提示词..." : 
-             isGeneratingImage ? "正在生成AI图像..." : 
-             "生成AI图像"}
+            {isGeneratingPrompt ? t.generatingPrompt : 
+             isGeneratingImage ? t.generatingImage : 
+             t.generateImage}
           </button>
 
           {/* 简化的游戏记录容器 */}
@@ -422,7 +445,7 @@ const handleObjectSelect = async (event) => {
               fontSize: '1.25rem',
               textAlign: 'center',
               letterSpacing: '0.5px'
-            }}>游戏记录 (5轮)</h3>
+            }}>{t.gameRecords}</h3>
             
             {gameHistory.map((record, index) => (
               <div 
@@ -441,8 +464,8 @@ const handleObjectSelect = async (event) => {
                     '3px solid rgba(164, 128, 115, 0.8)', // 错误时的边框色
                 }}
               >
-                <span>第 {record.round} 轮</span>
-                <span>{record.isCorrect ? '✓ 答对了！' : '✗ 答错了'}</span>
+                <span>{t.round} {record.round}</span>
+                <span>{record.isCorrect ? t.correct : t.incorrect}</span>
               </div>
             ))}
             
@@ -454,7 +477,7 @@ const handleObjectSelect = async (event) => {
                 fontSize: '1.2rem',
                 fontWeight: '500'
               }}>
-                当前得分：{totalScore} / {gameHistory.length}
+                {t.currentScore}: {totalScore} / {gameHistory.length}
               </div>
             ) : (
               <div style={{
@@ -462,7 +485,7 @@ const handleObjectSelect = async (event) => {
                 color: 'rgba(171, 155, 132, 0.7)',
                 padding: '1rem'
               }}>
-                还没有游戏记录
+                {t.noRecords}
               </div>
             )}
             <div style={{ textAlign: 'center' }}>
@@ -479,7 +502,7 @@ const handleObjectSelect = async (event) => {
                   cursor: 'pointer'
                 }}
               >
-                重置游戏
+                {t.resetGame}
               </button>
             </div>
           </div>
@@ -487,8 +510,8 @@ const handleObjectSelect = async (event) => {
         
         <div className="right-panel">
           <h2 className="guess-prompt">
-            {isGeneratingImage || isGeneratingPrompt ? "大语言模型正在推理，请等待..." : 
-             aiImage ? "请猜测哪个是AI生成的图片？" : "请选择对象并生成AI图像"}
+            {isGeneratingImage || isGeneratingPrompt ? t.waiting : 
+             aiImage ? t.guessPrompt : t.waitingForSelection}
           </h2>
           <div className="images-container">
             {(isGeneratingImage || aiImage || isGeneratingPrompt) ? (
@@ -513,11 +536,11 @@ const handleObjectSelect = async (event) => {
                         onClick={() => !showResult && handleGuess(type)}
                         disabled={showResult}
                       >
-                        选择这个
+                        {t.selectThis}
                       </button>
                       {showResult && (
                         <div className={`result-badge ${type === userGuess ? (type === 'ai' ? 'correct' : 'incorrect') : ''}`}>
-                          {type === 'real' ? '真实图片' : 'AI生成'}
+                          {type === 'real' ? t.realImage : t.aiGenerated}
                         </div>
                       )}
                     </>
@@ -527,10 +550,14 @@ const handleObjectSelect = async (event) => {
             ) : (
               <>
                 <div className="image-guess-container">
-                  <div className="initial-placeholder" />
+                  <div className="initial-placeholder">
+                    {t.imagePlaceholder}
+                  </div>
                 </div>
                 <div className="image-guess-container">
-                  <div className="initial-placeholder" />
+                  <div className="initial-placeholder">
+                    {t.imagePlaceholder}
+                  </div>
                 </div>
               </>
             )}
@@ -538,7 +565,7 @@ const handleObjectSelect = async (event) => {
           {/* 删除调试信息显示部分 */}
         </div>
       </div>
-      {isLoading && <div className="loading">处理中...</div>}
+      {isLoading && <div className="loading">{t.processing}</div>}
     </div>
   )
 }
