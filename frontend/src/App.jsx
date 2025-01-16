@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { presetObjects } from './config/objects'
+import { presetObjects, categories } from './config/objects'
+
+const UNSPLASH_API_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
 
 function App() {
   const [response, setResponse] = useState(null)
@@ -52,19 +54,93 @@ const resetGameHistory = async () => {
     resetGameState();
 };
 
-  const handleObjectSelect = async (event) => {
-    const selected = event.target.value
-    setSelectedObject(selected)
-    
-    const selectedObjData = presetObjects.find(obj => obj.id === selected)
-    if (!selectedObjData) return
+// 添加翻译函数
+const translateToEnglish = async (chineseText) => {
+  try {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await fetch(`${backendUrl}/translate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: chineseText,
+        model_type: modelType
+      })
+    });
 
-    // 只重置当前轮次的状态，不重置游戏历史
-    resetGameState()
-    
-    setRealImage(selectedObjData.image)
-    await generatePrompt(selectedObjData)
+    if (!response.ok) {
+      throw new Error('Translation failed');
+    }
+
+    const data = await response.json();
+    return data.data.translation;
+  } catch (error) {
+    console.error('Translation error:', error);
+    throw error;
   }
+};
+
+const handleObjectSelect = async (event) => {
+  const selected = event.target.value
+  setSelectedObject(selected)
+  
+  const selectedObjData = presetObjects.find(obj => obj.id === selected)
+  if (!selectedObjData) return
+
+  resetGameState()
+  
+  try {
+    // 使用中文名称和类别直接构建搜索参数
+    const searchTerms = `${selectedObjData.name}`;
+    const params = new URLSearchParams({
+      query: searchTerms,
+      orientation: 'portrait',
+      content_filter: 'high',
+      client_id: import.meta.env.VITE_UNSPLASH_ACCESS_KEY,
+    });
+
+    const response = await fetch(
+      `https://api.unsplash.com/photos/random?${params}`,
+      {
+        headers: {
+          'Accept-Version': 'v1',
+          'Authorization': `Client-ID ${import.meta.env.VITE_UNSPLASH_ACCESS_KEY}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Unsplash API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const imageUrl = data.urls.portrait || data.urls.regular;
+    
+    // 存储图片归属信息
+    const attribution = {
+      name: data.user.name,
+      username: data.user.username,
+      link: data.links.html
+    };
+    console.log(`Photo by ${attribution.name} (@${attribution.username}) on Unsplash`);
+    
+    // 更新状态
+    setRealImage(imageUrl);
+    
+    // 传递更新后的对象数据给 generatePrompt
+    await generatePrompt({
+      ...selectedObjData,
+      image: imageUrl,
+      attribution
+    });
+
+  } catch (error) {
+    console.error('Error fetching Unsplash image:', error);
+    alert(`获取${selectedObjData.name}的图片失败，请重试`);
+    setSelectedObject('');
+  }
+}
 
   const generatePrompt = async (objData) => {
     setIsGeneratingPrompt(true)
@@ -254,10 +330,16 @@ const resetGameHistory = async () => {
               className="object-select"
             >
               <option value="">请选择一个对象</option>
-              {presetObjects.map(obj => (
-                <option key={obj.id} value={obj.id}>
-                  {obj.name}
-                </option>
+              {Object.entries(categories).map(([category, categoryName]) => (
+                <optgroup key={category} label={categoryName}>
+                  {presetObjects
+                    .filter(obj => obj.category === category)
+                    .map(obj => (
+                      <option key={obj.id} value={obj.id}>
+                        {obj.name}
+                      </option>
+                    ))}
+                </optgroup>
               ))}
             </select>
           </div>
