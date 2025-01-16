@@ -21,3 +21,10 @@ build/
 .vscode/
 .idea/
 *.iml
+
+# 忽略图片
+.png
+.jpg
+.bmp
+.jpeg
+.tiff

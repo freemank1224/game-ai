@@ -53,7 +53,11 @@ function App() {
   const generatePrompt = async (objData) => {
     setIsGeneratingPrompt(true)
     try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://192.168.1.2:8000'
+        // 移除默认值，强制使用环境变量
+        const backendUrl = import.meta.env.VITE_BACKEND_URL
+        if (!backendUrl) {
+            throw new Error('Backend URL not configured')
+        }
         const apiUrl = `${backendUrl}/analyze-image`
         console.log('使用的后端地址:', backendUrl)
         console.log('请求地址:', apiUrl)
@@ -140,7 +144,11 @@ function App() {
   const handleGenerateImage = async () => {
     setIsGeneratingImage(true)
     try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://192.168.1.2:8000'
+        const backendUrl = import.meta.env.VITE_BACKEND_URL
+        console.log('backendURL：', backendUrl)
+        if (!backendUrl) {
+            throw new Error('Backend URL not configured')
+        }
         const apiUrl = `${backendUrl}/generate-image`
         const formData = new FormData()
         formData.append('prompt', description)
@@ -150,11 +158,18 @@ function App() {
             body: formData
         })
         const result = await response.json()
-        console.log('生成图片响应:', result)  // 添加调试日志
+        console.log('生成图片响应:', result)
         
         if (result.code === 200 && result.data.image_url) {
-            console.log('设置 AI 图片 URL:', result.data.image_url)  // 添加调试日志
-            setAiImage(result.data.image_url)
+            // 检查返回的URL是否是完整路径
+            const imageUrl = result.data.image_url
+            // 如果返回的是相对路径（不包含http），则拼接完整路径
+            const fullImageUrl = imageUrl.startsWith('http') 
+                ? imageUrl 
+                : `${backendUrl}/static/images/${imageUrl}`
+            
+            console.log('完整图片URL:', fullImageUrl)
+            setAiImage(fullImageUrl)
             setImagePositions(shuffle(['real', 'ai']))
             setShowResult(false)
             setUserGuess(null)

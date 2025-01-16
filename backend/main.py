@@ -13,9 +13,18 @@ import base64
 import shutil
 from pathlib import Path
 
-# 加载环境变量，优先使用自定义环境变量文件
-env_file = os.getenv('ENV_FILE', '.env')
-load_dotenv(env_file)
+# 获取项目根目录的绝对路径
+ROOT_DIR = Path(__file__).resolve().parent.parent
+ENV_PATH = ROOT_DIR / '.env'
+
+print(f"Looking for .env file at: {ENV_PATH}")
+if not ENV_PATH.exists():
+    print(f"Warning: .env file not found at {ENV_PATH}")
+else:
+    print(f"Found .env file at {ENV_PATH}")
+    # 使用绝对路径加载环境变量
+    load_dotenv(ENV_PATH, override=True)
+    print(f"Loaded BACKEND_ENDPOINT: {os.getenv('BACKEND_ENDPOINT')}")
 
 app = FastAPI()
 
@@ -156,7 +165,7 @@ async def generate_image(prompt: str = Form(...)):
                 print(f"Debug - File copied successfully")
                 
                 # 返回可访问的URL
-                public_url = f"{os.getenv('BACKEND_ENDPOINT', 'http://192.168.1.2:8000')}/static/images/{filename}"
+                public_url = f"{os.getenv('BACKEND_ENDPOINT')}/static/images/{filename}"
                 print(f"Debug - Public URL: {public_url}")
                 print(f"Debug - File exists in static dir: {os.path.exists(dest_path)}")  # 添加调试日志
                 
@@ -245,6 +254,34 @@ async def test_image(filename: str):
 #             except Exception as e:
 #                 print(f"Debug - ComfyUI error: {str(e)}")
 #                 return ResponseModel.error(f"图片生成失败: {str(e)}")
+                
+#         except Exception as e:
+#             print(f"Debug - Processing error: {str(e)}")
+#             return ResponseModel.error(f"处理失败: {str(e)}")
+            
+#     except Exception as e:
+#         print(f"Debug - General error: {str(e)}")
+#         return ResponseModel.error(f"生成失败: {str(e)}")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app, 
+        host="0.0.0.0",     # 修改为监听所有网络接口
+        log_level="debug",
+        port=8000,
+        reload=True,         # 开发模式下启用热重载
+        access_log=True
+    )
+
+#                 return ResponseModel.error(f"图片生成失败: {str(e)}")
+import os
+from pathlib import Path
+
+print("Current working directory:", os.getcwd())
+print("Script location:", Path(__file__).resolve())
+print("Project root:", Path(__file__).resolve().parent.parent)
+
                 
 #         except Exception as e:
 #             print(f"Debug - Processing error: {str(e)}")
