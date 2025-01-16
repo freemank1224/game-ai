@@ -91,17 +91,30 @@ const handleObjectSelect = async (event) => {
   resetGameState()
   
   try {
-    // 使用中文名称和类别直接构建搜索参数
-    const searchTerms = `${selectedObjData.name}`;
+    // 调试日志
+    console.log('Selected object:', selectedObjData);
+    console.log('Search ID:', selectedObjData.id);
+    
+    // 构建精确的搜索词
+    const searchTerms = selectedObjData.id
+      .replace(/_/g, ' ') // 将下划线替换为空格
+      .toLowerCase() // 转为小写
+      .trim(); // 移除多余空格
+    
+    console.log('Search terms:', searchTerms);
+    
+    // 构建 Unsplash API 查询参数
     const params = new URLSearchParams({
       query: searchTerms,
       orientation: 'portrait',
       content_filter: 'high',
+      per_page: 30, // 增加返回结果数量
       client_id: import.meta.env.VITE_UNSPLASH_ACCESS_KEY,
     });
 
-    const response = await fetch(
-      `https://api.unsplash.com/photos/random?${params}`,
+    // 首先搜索照片
+    const searchResponse = await fetch(
+      `https://api.unsplash.com/search/photos?${params}`,
       {
         headers: {
           'Accept-Version': 'v1',
@@ -110,25 +123,45 @@ const handleObjectSelect = async (event) => {
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`Unsplash API error: ${response.status}`);
+    if (!searchResponse.ok) {
+      throw new Error(`Unsplash API error: ${searchResponse.status}`);
     }
 
-    const data = await response.json();
-    const imageUrl = data.urls.portrait || data.urls.regular;
+    const searchData = await searchResponse.json();
+    console.log('Unsplash search results:', searchData);
+
+    if (!searchData.results || searchData.results.length === 0) {
+      throw new Error('No images found for this search term');
+    }
+
+    // 随机选择一张相关度较高的图片
+    const randomIndex = Math.floor(Math.random() * Math.min(10, searchData.results.length));
+    const selectedImage = searchData.results[randomIndex];
+    
+    const imageUrl = selectedImage.urls.portrait || selectedImage.urls.regular;
     
     // 存储图片归属信息
     const attribution = {
-      name: data.user.name,
-      username: data.user.username,
-      link: data.links.html
+      name: selectedImage.user.name,
+      username: selectedImage.user.username,
+      link: selectedImage.links.html
     };
-    console.log(`Photo by ${attribution.name} (@${attribution.username}) on Unsplash`);
     
+    console.log(`Selected image by ${attribution.name} (@${attribution.username})`);
+    
+    // 记录下载
+    if (selectedImage.links.download_location) {
+      await fetch(selectedImage.links.download_location, {
+        headers: {
+          'Authorization': `Client-ID ${import.meta.env.VITE_UNSPLASH_ACCESS_KEY}`
+        }
+      });
+    }
+
     // 更新状态
     setRealImage(imageUrl);
     
-    // 传递更新后的对象数据给 generatePrompt
+    // 传递对象数据给 generatePrompt
     await generatePrompt({
       ...selectedObjData,
       image: imageUrl,
