@@ -22,7 +22,7 @@ function App() {
   const [totalScore, setTotalScore] = useState(0);
   const [language, setLanguage] = useState('zh') // 添加语言状态
   const t = translations[language] // 获取当前语言的翻译
-  const [countdownTime, setCountdownTime] = useState(10); // 默认10秒
+  const [countdownTime, setCountdownTime] = useState(2); // 默认3秒
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [imagesBlurred, setImagesBlurred] = useState(false);
   const countdownTimer = useRef(null);
@@ -361,6 +361,7 @@ const handleObjectSelect = async (event) => {
   const handleGuess = (guess) => {
     setUserGuess(guess)
     setShowResult(true)
+    setImagesBlurred(false)  // 在用户做出选择后立即取消模糊效果
     
     const isCorrect = guess === 'ai'
     const newHistory = [...gameHistory, {
@@ -576,7 +577,7 @@ const handleObjectSelect = async (event) => {
                             showResult && userGuess === type 
                               ? `selected-image ${type === 'ai' ? 'correct' : 'incorrect'}`
                               : ''
-                          } ${imagesBlurred ? 'blurred' : ''}`}
+                          } ${imagesBlurred && !showResult ? 'blurred' : ''}`}  // 修改这里，只在未选择时才模糊
                           onClick={() => !showResult && handleGuess(type)}
                         />
                         <button 
