@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from typing import Optional  # 添加这行导入
 import requests
 import os
+from datetime import datetime  # 添加这行导入
 from dotenv import load_dotenv
 from llm_handlers import LLMFactory
 from vision_handler import VisionModelHandler
@@ -12,6 +13,7 @@ from comfy_handler import ComfyUIHandler
 import base64
 import shutil
 from pathlib import Path
+import aiohttp  # 确保也导入这个，用于下载图片
 
 # 获取项目根目录的绝对路径
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -48,6 +50,19 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # 添加前端静态目录配置
 FRONTEND_STATIC_DIR = Path("../frontend/public/static/images")
 FRONTEND_STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+# 新增图片存储路径配置
+REAL_IMAGES_DIR = Path("static/images/REAL")
+GEN_IMAGES_DIR = Path("static/images/GEN")
+IMAGEBASE_DIR = Path("../IMAGEBASE")  # 根目录的图片数据库
+IMAGEBASE_REAL_DIR = IMAGEBASE_DIR / "REAL"  # IMAGEBASE下的真实图片目录
+IMAGEBASE_GEN_DIR = IMAGEBASE_DIR / "GEN"    # IMAGEBASE下的生成图片目录
+
+# 创建所有必要的存储目录
+REAL_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+GEN_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+IMAGEBASE_REAL_DIR.mkdir(parents=True, exist_ok=True)
+IMAGEBASE_GEN_DIR.mkdir(parents=True, exist_ok=True)
 
 # 单独添加文件大小限制配置
 @app.middleware("http")
@@ -252,6 +267,71 @@ async def clear_images():
     except Exception as e:
         print(f"清理图片出错: {str(e)}")
         return ResponseModel.error(f"清理图片失败: {str(e)}")
+
+@app.post("/save-game-images")
+async def save_game_images(
+    real_image_url: str = Form(...),
+    gen_image_url: str = Form(...),
+    object_name: str = Form(...)
+):
+    """保存每轮游戏的真实图片和生成图片"""
+    try:
+        # 从URL下载图片
+        async def download_image(url: str) -> bytes:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    return await response.read()
+
+        # 生成时间戳
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 保存真实图片
+        real_image_data = await download_image(real_image_url)
+        real_filename = f"{object_name}_{timestamp}_real.jpg"
+        real_path = REAL_IMAGES_DIR / real_filename
+        with open(real_path, 'wb') as f:
+            f.write(real_image_data)
+            
+        # 保存生成图片
+        gen_image_data = await download_image(gen_image_url)
+        gen_filename = f"{object_name}_{timestamp}_gen.jpg"
+        gen_path = GEN_IMAGES_DIR / gen_filename
+        with open(gen_path, 'wb') as f:
+            f.write(gen_image_data)
+            
+        return ResponseModel.success({
+            "real_path": str(real_path),
+            "gen_path": str(gen_path)
+        })
+        
+    except Exception as e:
+        print(f"保存游戏图片出错: {str(e)}")
+        return ResponseModel.error(f"保存图片失败: {str(e)}")
+
+@app.post("/backup-game-images")
+async def backup_game_images():
+    """将REAL和GEN文件夹中的图片直接转移到IMAGEBASE对应目录"""
+    try:
+        # 转移REAL文件夹中的图片
+        for img in REAL_IMAGES_DIR.glob("*.*"):
+            if img.is_file() and not img.name.startswith('.'):
+                shutil.copy2(img, IMAGEBASE_REAL_DIR / img.name)
+                img.unlink()  # 删除原文件
+
+        # 转移GEN文件夹中的图片
+        for img in GEN_IMAGES_DIR.glob("*.*"):
+            if img.is_file() and not img.name.startswith('.'):
+                shutil.copy2(img, IMAGEBASE_GEN_DIR / img.name)
+                img.unlink()  # 删除原文件
+                
+        return ResponseModel.success({
+            "backup_path": str(IMAGEBASE_DIR),
+            "message": "Images backed up successfully"
+        })
+        
+    except Exception as e:
+        print(f"备份游戏图片出错: {str(e)}")
+        return ResponseModel.error(f"备份图片失败: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

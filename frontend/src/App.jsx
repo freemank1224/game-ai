@@ -63,11 +63,25 @@ function App() {
 };
 
 const resetGameHistory = async () => {
-    await clearImages();  // 添加清理图片的调用
-    setGameHistory([]);
-    setTotalScore(0);
-    setSelectedObject('');
-    resetGameState();
+    try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL;
+        
+        // 先备份图片到IMAGEBASE
+        await fetch(`${backendUrl}/backup-game-images`, {
+            method: 'POST'
+        });
+        
+        // 然后清理当前图片
+        await clearImages();
+        
+        // 重置游戏状态
+        setGameHistory([]);
+        setTotalScore(0);
+        setSelectedObject('');
+        resetGameState();
+    } catch (error) {
+        console.error('重置游戏状态出错:', error);
+    }
 };
 
 // 添加翻译函数
@@ -361,7 +375,7 @@ const handleObjectSelect = async (event) => {
   const handleGuess = (guess) => {
     setUserGuess(guess)
     setShowResult(true)
-    setImagesBlurred(false)  // 在用户做出选择后立即取消模糊效果
+    setImagesBlurred(false)
     
     const isCorrect = guess === 'ai'
     const newHistory = [...gameHistory, {
@@ -373,6 +387,9 @@ const handleObjectSelect = async (event) => {
     setGameHistory(newHistory)
     setTotalScore(newHistory.filter(h => h.isCorrect).length)
     
+    // 保存本轮游戏的图片
+    saveGameImages()
+    
     // 完成 5 轮后的处理
     if (newHistory.length >= 5) {
         const finalScore = newHistory.filter(h => h.isCorrect).length;
@@ -382,6 +399,31 @@ const handleObjectSelect = async (event) => {
         }, 500);
     }
   }
+
+  // 添加保存图片的函数
+  const saveGameImages = async () => {
+    if (!realImage || !aiImage || !selectedObject) return;
+    
+    try {
+      const formData = new FormData();
+      formData.append('real_image_url', realImage);
+      formData.append('gen_image_url', aiImage);
+      formData.append('object_name', selectedObject);
+      
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
+      const response = await fetch(`${backendUrl}/save-game-images`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      if (result.code !== 200) {
+        console.error('保存游戏图片失败:', result.message);
+      }
+    } catch (error) {
+      console.error('保存游戏图片错误:', error);
+    }
+  };
 
   // 添加语言切换处理函数
   const handleLanguageChange = (event) => {
