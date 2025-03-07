@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { presetObjects, categories } from './config/objects'
 import { languages, translations, objectTranslations } from './config/languages'
@@ -22,6 +22,18 @@ function App() {
   const [totalScore, setTotalScore] = useState(0);
   const [language, setLanguage] = useState('zh') // 添加语言状态
   const t = translations[language] // 获取当前语言的翻译
+  const [countdownTime, setCountdownTime] = useState(10); // 默认10秒
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [imagesBlurred, setImagesBlurred] = useState(false);
+  const countdownTimer = useRef(null);
+
+  const resetTimer = () => {
+    if (countdownTimer.current) {
+      clearInterval(countdownTimer.current);
+    }
+    setTimeRemaining(null);
+    setImagesBlurred(false);
+  };
 
   const resetGameState = () => {
     setDescription('')
@@ -31,6 +43,7 @@ function App() {
     setIsGeneratingImage(false)
     setIsGeneratingPrompt(false)
     setRealImage(null)
+    resetTimer();
     // 移除游戏历史重置相关代码
   }
 
@@ -269,6 +282,22 @@ const handleObjectSelect = async (event) => {
     }
   }
 
+  const startCountdown = () => {
+    setTimeRemaining(countdownTime);
+    setImagesBlurred(false);
+    
+    countdownTimer.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownTimer.current);
+          setImagesBlurred(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const handleGenerateImage = async () => {
     setIsGeneratingImage(true)
     try {
@@ -297,6 +326,7 @@ const handleObjectSelect = async (event) => {
             setImagePositions(shuffle(['real', 'ai']))
             setShowResult(false)
             setUserGuess(null)
+            startCountdown();
         } else {
             throw new Error(result.message || '生成失败')
         }
@@ -527,38 +557,47 @@ const handleObjectSelect = async (event) => {
           </h2>
           <div className="images-container">
             {(isGeneratingImage || aiImage || isGeneratingPrompt) ? (
-              imagePositions.map((type, index) => (
-                <div key={type} className="image-guess-container">
-                  {isGeneratingImage || isGeneratingPrompt ? (
-                    <div className="loading-placeholder" />
-                  ) : (
-                    <>
-                      <img
-                        src={type === 'real' ? realImage : aiImage}
-                        alt={type}
-                        className={`image ${
-                          showResult && userGuess === type 
-                            ? `selected-image ${type === 'ai' ? 'correct' : 'incorrect'}`
-                            : ''
-                        }`}
-                        onClick={() => !showResult && handleGuess(type)}
-                      />
-                      <button 
-                        className={`guess-button ${showResult && userGuess === type ? 'selected' : ''}`}
-                        onClick={() => !showResult && handleGuess(type)}
-                        disabled={showResult}
-                      >
-                        {t.chooseButton}
-                      </button>
-                      {showResult && (
-                        <div className={`result-badge ${type === userGuess ? (type === 'ai' ? 'correct' : 'incorrect') : ''}`}>
-                          {type === 'real' ? t.realImage : t.aiGenerated}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))
+              <>
+                {timeRemaining !== null && !imagesBlurred && (
+                  <div className="countdown-timer">
+                    {t.timeRemaining.replace('{time}', timeRemaining)}
+                  </div>
+                )}
+                {imagePositions.map((type, index) => (
+                  <div key={type} className="image-guess-container">
+                    {isGeneratingImage || isGeneratingPrompt ? (
+                      <div className="loading-placeholder" />
+                    ) : (
+                      <>
+                        <img
+                          src={type === 'real' ? realImage : aiImage}
+                          alt={type}
+                          className={`image ${
+                            showResult && userGuess === type 
+                              ? `selected-image ${type === 'ai' ? 'correct' : 'incorrect'}`
+                              : ''
+                          } ${imagesBlurred ? 'blurred' : ''}`}
+                          onClick={() => !showResult && handleGuess(type)}
+                        />
+                        <button 
+                          className={`guess-button ${showResult && userGuess === type ? 'selected' : ''}`}
+                          onClick={() => !showResult && handleGuess(type)}
+                          disabled={showResult}
+                        >
+                          {t.chooseButton}
+                        </button>
+                        {showResult && (
+                          <div 
+                            className={`result-badge ${type === userGuess ? (type === 'ai' ? 'correct' : 'incorrect') : ''}`}
+                          >
+                            {type === 'real' ? t.realImage : t.aiGenerated}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </>
             ) : (
               <>
                 <div className="image-guess-container">

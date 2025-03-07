@@ -30,7 +30,9 @@ export const translations = {
     imagePlaceholder: '等待图片...',
     textareaPlaceholder: '这里将显示生成的描述词...',
     textareaGenerating: 'AI正在识别图像，生成提示词...',
-    chooseButton: '选择这张图片'
+    chooseButton: '选择这张图片',
+    countdownSetting: '观察时间设置(秒)',
+    timeRemaining: '剩余观察时间: {time}秒'
   },
   en: {
     title: 'AI Image Hunter',
@@ -57,7 +59,9 @@ export const translations = {
     imagePlaceholder: 'Waiting for image...',
     textareaPlaceholder: 'Generated description will appear here...',
     textareaGenerating: 'AI is analyzing image and generating prompts...',
-    chooseButton: 'Choose This Image'
+    chooseButton: 'Choose This Image',
+    countdownSetting: 'Observation Time (seconds)',
+    timeRemaining: 'Time Remaining: {time}s'
   },
   el: {
     title: 'Κυνηγός AI',
@@ -84,7 +88,9 @@ export const translations = {
     imagePlaceholder: 'Αναμονή για εικόνα...',
     textareaPlaceholder: 'Η περιγραφή θα εμφανιστεί εδώ...',
     textareaGenerating: 'Η AI αναλύει την εικόνα και δημιουργεί προτροπές...',
-    chooseButton: 'Επιλέξτε Αυτή την Εικόνα'
+    chooseButton: 'Επιλέξτε Αυτή την Εικόνα',
+    countdownSetting: 'Χρόνος Παρατήρησης (δευτερόλεπτα)',
+    timeRemaining: 'Υπολειπόμενος χρόνος: {time}δ'
   }
 };
 

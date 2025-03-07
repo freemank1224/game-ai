@@ -123,6 +123,11 @@ h1 {
     border-radius: 5px;
 }
 
+.image.blurred {
+  filter: blur(10px);
+  transition: filter 0.5s ease;
+}
+
 /* 删除重复的 .image-placeholder 定义，使用这个新的版本 */
 .image-placeholder {
     width: 100%;
@@ -278,4 +283,35 @@ h1 {
 
 .language-select:hover {
   border-color: #8b4513;
+}
+
+.countdown-setting {
+  margin: 20px 0;
+  padding: 10px;
+  background-color: rgba(188, 175, 155, 0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.countdown-setting input {
+  width: 60px;
+  padding: 5px;
+  border: 1px solid #d2b48c;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.countdown-timer {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(139, 69, 19, 0.8);
+  color: white;
+  padding: 5px 15px;
+  border-radius: 15px;
+  font-size: 1.2em;
+  z-index: 1;
 }
